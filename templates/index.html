@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMR Answer Evaluation System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 OMR Answer Evaluation System</h1>
+            <p>Automated scanning and evaluation of OMR sheets</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Upload Section -->
+            <div class="card">
+                <h2>📤 Upload & Evaluate</h2>
+                
+                <div id="uploadAlert" class="alert"></div>
+
+                <div class="form-group">
+                    <label for="answerKey">Select Answer Key:</label>
+                    <select id="answerKey" required>
+                        <option value="">-- Choose Answer Key --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="rollNumber">Roll Number:</label>
+                    <input type="text" id="rollNumber" placeholder="e.g., A001">
+                </div>
+
+                <div class="form-group">
+                    <label for="studentName">Student Name:</label>
+                    <input type="text" id="studentName" placeholder="e.g., John Doe">
+                </div>
+
+                <div class="form-group">
+                    <label>Upload OMR Sheet (JPG/PNG):</label>
+                    <div class="file-input-wrapper">
+                        <label class="file-input-label" for="omrFile">
+                            <span>📁 Click to select or drag & drop</span>
+                        </label>
+                        <input type="file" id="omrFile" accept=".jpg,.jpeg,.png">
+                    </div>
+                </div>
+
+                <button onclick="uploadOMR()">🔍 Process OMR Sheet</button>
+
+                <div id="uploadSpinner" class="spinner"></div>
+
+                <div id="resultSection" style="display: none; margin-top: 20px;">
+                    <div class="score-box">
+                        <div class="score-label">Final Score</div>
+                        <div class="score-value" id="finalScore">0%</div>
+                    </div>
+
+                    <div class="result-display">
+                        <div class="result-row">
+                            <strong>Student:</strong>
+                            <span id="resultName">-</span>
+                        </div>
+                        <div class="result-row">
+                            <strong>Roll Number:</strong>
+                            <span id="resultRoll">-</span>
+                        </div>
+                        <div class="result-row">
+                            <strong>Total Questions:</strong>
+                            <span id="resultTotal">-</span>
+                        </div>
+                        <div class="result-row">
+                            <strong>✓ Correct:</strong>
+                            <span class="badge success" id="resultCorrect">-</span>
+                        </div>
+                        <div class="result-row">
+                            <strong>✗ Incorrect:</strong>
+                            <span class="badge error" id="resultIncorrect">-</span>
+                        </div>
+                        <div class="result-row">
+                            <strong>⊘ Skipped:</strong>
+                            <span class="badge warning" id="resultSkipped">-</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <img id="resultChart" src="" alt="Result Chart">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer Key Management -->
+            <div class="card">
+                <h2>🔑 Answer Key Management</h2>
+
+                <div id="keyAlert" class="alert"></div>
+
+                <div class="form-group">
+                    <label for="keyName">Answer Key Name:</label>
+                    <input type="text" id="keyName" placeholder="e.g., Test_Jan_2025">
+                </div>
+
+                <div class="form-group">
+                    <label for="answers">Answers (comma-separated):</label>
+                    <textarea id="answers" rows="6" placeholder="Example: 0,1,2,3,0,1,2,3..."></textarea>
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        0=A, 1=B, 2=C, 3=D
+                    </small>
+                </div>
+
+                <button onclick="createAnswerKey()">💾 Create Answer Key</button>
+
+                <div style="margin-top: 30px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Available Keys:</h3>
+                    <div id="keysList" style="background: #f9f9f9; padding: 15px; border-radius: 8px; min-height: 100px;">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results History -->
+        <div class="card">
+            <h2>📊 Evaluation Results</h2>
+
+            <div style="margin-bottom: 20px;">
+                <button onclick="loadResults()" style="width: auto; padding: 10px 20px;">🔄 Refresh</button>
+                <button onclick="exportResults()" style="width: auto; padding: 10px 20px; background: #28a745; margin-left: 10px;">📥 Export CSV</button>
+                <button onclick="loadStatistics()" style="width: auto; padding: 10px 20px; background: #17a2b8; margin-left: 10px;">📈 Statistics</button>
+            </div>
+
+            <div id="statsContainer" style="display: none; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px;">
+                        <div style="color: #0066cc; font-weight: bold;">Total Evaluated</div>
+                        <div style="font-size: 1.8em; font-weight: bold;" id="statTotal">0</div>
+                    </div>
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px;">
+                        <div style="color: #2e7d32; font-weight: bold;">Average Score</div>
+                        <div style="font-size: 1.8em; font-weight: bold;" id="statAvg">0%</div>
+                    </div>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+                        <div style="color: #e65100; font-weight: bold;">Max Score</div>
+                        <div style="font-size: 1.8em; font-weight: bold;" id="statMax">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Roll Number</th>
+                            <th>Name</th>
+                            <th>Total</th>
+                            <th>Correct</th>
+                            <th>Incorrect</th>
+                            <th>Skipped</th>
+                            <th>Score (%)</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #999;">No results yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
