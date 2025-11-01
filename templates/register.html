@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Register - OMR System{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Full-page gradient background */
+body {
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+}
+
+/* Hide navbar and footer for register page */
+.navbar, footer {
+    display: none;
+}
+
+/* Centered register card */
+.auth-container {
+    background: rgba(255, 255, 255, 0.98);
+    padding: 50px 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.25);
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+    text-align: center;
+    animation: fadeIn 0.6s ease-in-out;
+}
+
+/* Title */
+.auth-container h2 {
+    color: #222;
+    margin-bottom: 25px;
+    font-size: 1.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Form */
+.auth-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.auth-container input {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    width: 100%;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.auth-container input:focus {
+    border-color: #2575fc;
+    box-shadow: 0 0 5px rgba(37,117,252,0.3);
+}
+
+/* Button */
+.auth-container button {
+    background: linear-gradient(135deg, #2575fc 0%, #6a11cb 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    padding: 12px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-container button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+/* Flash messages */
+.alert {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.alert.success { background: #d4edda; color: #155724; }
+.alert.info { background: #cce5ff; color: #004085; }
+.alert.danger { background: #f8d7da; color: #721c24; }
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 35px 25px;
+        max-width: 90%;
+    }
+}
+
+/* Fade animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <h2>🧾 Register Admin</h2>
+  <form method="POST" action="{{ url_for('register') }}">
+    <input type="text" name="username" placeholder="Create Username" required>
+    <input type="password" name="password" placeholder="Create Password" required>
+    <button type="submit">Register</button>
+  </form>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+        <div class="alert {{ category }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</div>
+{% endblock %}

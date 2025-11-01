@@ -1,29 +1,53 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OMR System{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="/" class="nav-logo">📋 OMR System</a>
-            <ul class="nav-menu">
+            <a href="/" class="nav-logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="OMR Logo" class="nav-logo-img">
+                <div class="nav-title">
+                    <h1>OMR Answer Evaluation System</h1>
+                    <p>Automated scanning and evaluation of OMR sheets</p>
+                </div>
+            </a>
+            <div class="nav-right">
+                {% if current_user.is_authenticated %}
+                <span class="nav-user">👋 {{ current_user.username }}</span>
+                <form action="{{ url_for('logout') }}" method="get" style="display:inline;">
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+                {% endif %}
+            </div>
+            <!--ul class="nav-menu">
                 <li><a href="/" class="nav-link">Home</a></li>
                 <li><a href="/#results" class="nav-link">Results</a></li>
-            </ul>
+            </ul-->
         </div>
     </nav>
 
+    <!-- Page Content -->
     <main>
         {% block content %}{% endblock %}
     </main>
 
     <footer>
-        <p>&copy; 2024 OMR Answer Evaluation System. All rights reserved.</p>
+        <p>&copy; 2025 OMR Answer Evaluation System. All rights reserved.</p>
     </footer>
 
     {% block extra_js %}{% endblock %}

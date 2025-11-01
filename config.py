@@ -6,10 +6,11 @@ import os
 from pathlib import Path
 
 # Base paths
-BASE_DIR = Path(__file__).parent
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 RESULTS_FOLDER = os.path.join(BASE_DIR, 'results')
-DB_FILE = os.path.join(BASE_DIR, 'omr_system.db')
+DB_FILE = os.path.join(BASE_DIR, "omr_database.db")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # File settings
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
@@ -36,3 +37,7 @@ SESSION_TIMEOUT = 1800  # 30 minutes
 # Logging
 LOG_FILE = os.path.join(BASE_DIR, 'omr_system.log')
 LOG_LEVEL = 'INFO'
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'Lax'

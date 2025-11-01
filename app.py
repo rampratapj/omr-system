@@ -11,7 +11,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session, flash
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 import matplotlib.pyplot as plt
 import io
@@ -25,11 +27,123 @@ from config import *
 # ============================================================================
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
+
+
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
+
+# Initialize security modules
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'
+
+# ==============================
+# USER AUTHENTICATION
+# ==============================
+
+class User(UserMixin):
+    def __init__(self, id, username, password, role):
+        self.id = id
+        self.username = username
+        self.password = password
+        self.role = role
+
+@login_manager.user_loader
+def load_user(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, username, password, role FROM users WHERE id = ?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return User(*row)
+    return None
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Allow registration only if no users exist (first-time setup)."""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    user_count = c.fetchone()[0]
+    conn.close()
+
+    # If any user exists, block registration
+    if user_count > 0:
+        flash("Registration is disabled after first admin is created.", "info")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+
+        if not username or not password:
+            flash("Username and password are required.", "danger")
+            return render_template('register.html')
+
+        hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        try:
+            c.execute("INSERT INTO users (username, password, role, created_at) VALUES (?, ?, ?, datetime('now'))",
+                      (username, hashed_pw, 'admin'))
+            conn.commit()
+            flash("Admin account created successfully! Please log in.", "success")
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash("Username already exists.", "danger")
+        finally:
+            conn.close()
+
+    return render_template('register.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login route."""
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT id, username, password, role FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+        conn.close()
+
+        if not user:
+            flash(" No such user found. Please register first.", "danger")
+            print("Flashed message: No such user found. Please register first")  # or similar for each case
+            return redirect(url_for('login'))  #  use redirect, not render_template
+
+        if user and bcrypt.check_password_hash(user[2], password):
+            login_user(User(*user))
+            flash(' Login successful!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash(' Invalid password. Please try again.', 'danger')
+            print("Flashed message: Invalid password")  # or similar for each case
+            return redirect(url_for('login'))  #  use redirect, not render_template
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    session.clear()
+    flash('Logged out successfully.', 'info')
+    return redirect(url_for('login'))
+
 
 # ============================================================================
 # DATABASE INITIALIZATION
@@ -72,7 +186,7 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print("✓ Database initialized successfully")
+    print("Database initialized successfully")
 
 init_db()
 
@@ -512,11 +626,13 @@ def allowed_file(filename):
 # ============================================================================
 
 @app.route('/')
+@login_required
 def index():
-    """Home page."""
+    """Home page (only visible after login)."""
     return render_template('index.html')
 
 @app.route('/api/upload', methods=['POST'])
+@login_required
 def upload_omr():
     """Process uploaded OMR sheet."""
     try:
@@ -612,6 +728,7 @@ def upload_omr():
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 @app.route('/api/create-answer-key', methods=['POST'])
+@login_required
 def create_answer_key():
     """Create new answer key."""
     try:
@@ -632,18 +749,21 @@ def create_answer_key():
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 @app.route('/api/answer-keys', methods=['GET'])
+@login_required
 def get_answer_keys():
     """Get all answer keys."""
     keys = AnswerKeyManager.list_keys()
     return jsonify({'keys': keys})
 
 @app.route('/api/delete-key/<key_name>', methods=['DELETE'])
+@login_required
 def delete_key(key_name):
     """Delete an answer key."""
     success, msg = AnswerKeyManager.delete_key(key_name)
     return jsonify({'success': success, 'message': msg})
 
 @app.route('/api/results', methods=['GET'])
+@login_required
 def get_results():
     """Get all evaluation results."""
     try:
@@ -670,6 +790,7 @@ def get_results():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/export-results', methods=['GET'])
+@login_required
 def export_results():
     """Export results to CSV."""
     try:
@@ -688,6 +809,7 @@ def export_results():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/statistics', methods=['GET'])
+@login_required
 def get_statistics():
     """Get overall statistics."""
     try:
@@ -729,4 +851,5 @@ if __name__ == '__main__':
     print("Starting Flask server...")
     print("Access at: http://localhost:5000")
     print("=" * 50)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    #app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=false, host='0.0.0.0', port=8080)

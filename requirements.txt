@@ -6,3 +6,6 @@ Pillow==10.0.0
 werkzeug==3.0.0
 matplotlib==3.7.2
 python-dotenv==1.0.0
+scikit-learn
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
